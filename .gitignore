@@ -1,0 +1,14 @@
+node_modules/
+data/
+.env
+.env.*
+!.env.example
+test-results/
+*.log
+.DS_Store
+
+data-local/
+.civora/
+.civora-work/
+.civora-trash/
+_site/
