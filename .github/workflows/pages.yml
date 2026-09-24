@@ -1,0 +1,95 @@
+name: Build, test and deploy Pages
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: pages-${{ github.ref }}
+  cancel-in-progress: false
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    outputs:
+      app_build: ${{ steps.release.outputs.build }}
+      app_version: ${{ steps.release.outputs.version }}
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '22'
+      - name: Build browser application and Pages allowlist
+        run: npm run build:pages
+      - name: Record the exact application build
+        id: release
+        run: |
+          node --input-type=module -e "import fs from 'node:fs'; const r=JSON.parse(fs.readFileSync('_site/release.json','utf8')); fs.appendFileSync(process.env.GITHUB_OUTPUT, 'build='+r.build+'\nversion='+r.version+'\n');"
+      - name: Check syntax, engine and HTTP contracts
+        run: |
+          npm run check
+          npm test
+          npm run test:pages
+          node tests/static-http.mjs
+          for example in core local-text document-control automation explorer document-sets refinements workbench; do
+            node "examples/$example.mjs"
+          done
+      - name: Upload Pages artifact
+        if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+        uses: actions/upload-pages-artifact@v4
+        with:
+          path: _site
+  deploy:
+    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+    needs: build
+    permissions:
+      pages: write
+      id-token: write
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/configure-pages@v5
+      - name: Deploy browser application
+        id: deployment
+        uses: actions/deploy-pages@v4
+      - name: Verify the published HTML and release identity
+        env:
+          SITE_URL: ${{ steps.deployment.outputs.page_url }}
+          EXPECTED_BUILD: ${{ needs.build.outputs.app_build }}
+          EXPECTED_VERSION: ${{ needs.build.outputs.app_version }}
+        run: |
+          node --input-type=module <<'JS'
+          import {setTimeout as delay} from 'node:timers/promises';
+          import fs from 'node:fs';
+          const base = new URL(process.env.SITE_URL);
+          if (!base.pathname.endsWith('/')) base.pathname += '/';
+          for (let attempt = 0; attempt < 12; attempt++) {
+            try {
+              const releaseUrl = new URL('release.json', base);
+              releaseUrl.searchParams.set('verify', process.env.GITHUB_SHA);
+              const response = await fetch(releaseUrl, {signal: AbortSignal.timeout(15000), headers: {'Cache-Control': 'no-cache'}});
+              if (!response.ok) throw new Error('Release HTTP ' + response.status);
+              const release = await response.json();
+              if (release.build !== process.env.EXPECTED_BUILD || release.version !== process.env.EXPECTED_VERSION) throw new Error('Published release does not match the tested build');
+              const pageUrl = new URL(base);
+              pageUrl.searchParams.set('verify', process.env.GITHUB_SHA);
+              const page = await fetch(pageUrl, {signal: AbortSignal.timeout(15000), headers: {'Cache-Control': 'no-cache'}});
+              if (!page.ok) throw new Error('Application HTTP ' + page.status);
+              const html = await page.text();
+              if (!html.includes(release.build)) throw new Error('Application HTML does not contain the tested build');
+              const message = 'Verified live Civora ' + release.version + ' build ' + release.build + ' at ' + base.href;
+              console.log(message);
+              fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY, '## Deployment verified\n\n' + message + '\n');
+              break;
+            } catch (error) {
+              if (attempt === 11) throw error;
+              console.log('Publication check retry: ' + error.message);
+              await delay(5000);
+            }
+          }
+          JS
