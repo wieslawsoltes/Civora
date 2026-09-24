@@ -1,0 +1,18 @@
+<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width"><title>Civora standalone folder repository</title>
+<style>body{font:16px/1.7 system-ui;max-width:760px;margin:60px auto;padding:24px;background:#f5f7f8;color:#233840}button{font:inherit;padding:9px 16px;margin:5px;border:1px solid #a9bbb9;border-radius:7px;cursor:pointer}pre{white-space:pre-wrap;border:1px solid #dbe5e4;padding:20px;border-radius:10px;background:white}small{display:block}button:disabled{cursor:default;opacity:.5}</style>
+<h1>Standalone folder repository</h1><p>This page uses the independently bundled libraries, not the Civora application. Serve the archive root on localhost/HTTPS. Directory selection requires browser support and your explicit permission.</p>
+<button id="open">Choose and open a workspace</button><button id="create">Choose and create an empty workspace</button><button id="add" disabled>Add an example project</button><button id="verify" disabled>Verify original files</button><small>Local profiles are not authentication. Choose a dedicated folder; do not run independent writers against its .civora metadata.</small><pre id="status">No folder connected.</pre>
+<script type="module">
+import {BrowserDirectoryFS} from '../dist/lib/civora-filesystem.js';
+import {DirectoryRepository} from '../dist/lib/civora-folder-workspace.js';
+import {createEmptyWorkspace} from '../dist/lib/civora-core.js';
+import {WorkspaceEngine} from '../dist/lib/civora-storage.js';
+let engine,fs;
+const status=document.querySelector('#status');
+async function choose(create){if(!globalThis.showDirectoryPicker)throw Error('Directory picker unavailable. Use the full localhost edition.');const handle=await showDirectoryPicker({mode:'readwrite'}),nextFS=new BrowserDirectoryFS(handle),repository=await new DirectoryRepository(nextFS,{create}).open();if(create&&await repository.read())throw Error('Workspace exists; open it instead. Nothing was overwritten.');const state=await repository.initialize(create?createEmptyWorkspace():undefined);const next=await new WorkspaceEngine(repository,state.users.find(u=>u.active&&u.role==='admin').id).initialize();engine?.close();fs?.close();engine=next;fs=nextFS;status.textContent=JSON.stringify({folder:fs.label,workspace:state.name,revision:state.revision,projects:state.projects.length},null,2);document.querySelector('#add').disabled=false;document.querySelector('#verify').disabled=false;}
+async function invoke(fn){try{await fn();}catch(error){status.textContent=error.message;}}
+document.querySelector('#open').onclick=()=>invoke(()=>choose(false));document.querySelector('#create').onclick=()=>invoke(()=>choose(true));
+document.querySelector('#add').onclick=()=>invoke(async()=>{const code='EX'+Date.now().toString(36).toUpperCase();await engine.run('project.create',{code,name:'Standalone local project'});status.textContent='Saved immutable checkpoint at workspace revision '+engine.state.revision;});
+document.querySelector('#verify').onclick=()=>invoke(async()=>{status.textContent=JSON.stringify(await engine.repository.integrity(),null,2);});
+addEventListener('pagehide',()=>{engine?.close();fs?.close();});
+</script></html>

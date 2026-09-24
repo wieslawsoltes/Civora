@@ -1,0 +1,106 @@
+import {coordinationFixtures} from './seed-models.js';
+import { createEmptyWorkspace, applyCommand, currentVersion } from '../packages/core/index.js';
+import { prepareFile } from '../packages/storage/index.js';
+export function drawingSVG(title = 'Concourse · General arrangement', variant = 0) {
+  const lines = [], labels = [];
+  for (let x = 130; x <= 1010; x += 110) { lines.push(`<path d="M${x} 100V650" stroke-dasharray="5 7"/><circle cx="${x}" cy="88" r="12" fill="white"/>`); labels.push(`<text x="${x}" y="92" text-anchor="middle">${String.fromCharCode(65 + (x - 130) / 110)}</text>`); }
+  for (let y = 155; y <= 595; y += 110) { lines.push(`<path d="M85 ${y}H1080" stroke-dasharray="5 7"/><circle cx="72" cy="${y}" r="12" fill="white"/>`); labels.push(`<text x="72" y="${y + 4}" text-anchor="middle">${(y - 155) / 110 + 1}</text>`); }
+  let columns = ''; for (let x = 130; x <= 1010; x += 110) for (let y = 155; y <= 595; y += 110) columns += `<rect x="${x - 5}" y="${y - 5}" width="10" height="10" fill="#536b78"/>`;
+  const rooms = ['TICKETING', 'OPERATIONS', 'STAFF ROOM', 'PLANT / MEP', 'RETAIL 01', 'RETAIL 02', 'SERVICES', 'RETAIL 03'];
+  let roomsSVG = ''; rooms.forEach((name, i) => { const x = 145 + (i % 4) * 220, y = i < 4 ? 170 : 475; roomsSVG += `<rect x="${x}" y="${y}" width="190" height="105" fill="${i % 3 === 0 ? '#e9f4f1' : '#f5f7f8'}"/><path d="M${x} ${y + 105}V${y}H${x + 190}V${y + 105}H${x + 112}M${x + 80} ${y + 105}H${x}" fill="none" stroke="#425e6b" stroke-width="2.5"/><path d="M${x + 80} ${y + 105}v-32a32 32 0 0132 32" fill="none" stroke="#8598a0"/><text x="${x + 95}" y="${y + 50}" text-anchor="middle" font-size="10" fill="#647b85">${name}</text><text x="${x + 95}" y="${y + 66}" text-anchor="middle" font-size="9" fill="#95a6ae">${32 + i * 12}.00 m²</text>`; });
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1180 790" width="1180" height="790"><rect width="1180" height="790" fill="#fff"/><g fill="none" stroke="#c8d6dc" stroke-width=".7">${lines.join('')}</g><g font-family="Arial,sans-serif" font-size="10" fill="#71868f">${labels.join('')}</g><g>${roomsSVG}</g><g fill="none" stroke="#3c5968" stroke-width="3"><path d="M120 145H1020V605H120Z"/><path d="M120 145h900v460H120Z" transform="translate(-8 -8) scale(1.015 1.02)" stroke-width="1"/><path d="M120 300H400M710 300H1020M120 450H400M710 450H1020" stroke-width="2"/></g>${columns}<g font-family="Arial,sans-serif" text-anchor="middle"><text x="565" y="354" fill="#8d9ea5" font-size="12" letter-spacing="6">PUBLIC CONCOURSE</text><text x="565" y="378" fill="#b2bfc5" font-size="10">FFL + 24.500 · ZONE ${variant ? 'B' : 'A'}</text></g><g fill="none" stroke="#6f8c97" stroke-width="1"><path d="M180 385h135v45H180zM800 385h135v45H800z"/><path d="M186 393h122m-122 7h122m-122 7h122m-122 7h122m-122 7h122M806 393h122m-122 7h122m-122 7h122m-122 7h122m-122 7h122"/><path d="M120 640H1020m-900 -7v14m900-14v14"/><path d="M1060 145V605m-7 -460h14m-14 460h14"/></g><g font-family="Arial,sans-serif" font-size="10" fill="#80949d"><text x="540" y="656">90 000</text><text x="1070" y="380" transform="rotate(-90 1070 380)">46 000</text></g><path d="M1090 100V50l-8 15m8-15 8 15" fill="none" stroke="#5b7b88"/><text x="1086" y="40" font-family="Arial,sans-serif" font-size="13" fill="#5b7b88">N</text><path d="M42 688H1138V755H42Z M760 688V755M980 688V755" fill="none" stroke="#b6c6cd"/><g font-family="Arial,sans-serif" fill="#3e5e6e"><text x="60" y="714" font-size="12" letter-spacing="2">NORTHLINE · CENTRAL STATION</text><text x="60" y="736" font-size="14">${title.replaceAll('&', '&amp;').replaceAll('<', '&lt;')}</text><text x="778" y="711" font-size="9">DRAWING NUMBER</text><text x="778" y="737" font-size="13">NLC-ARC-00-DR-A-${String(1001 + variant)}</text><text x="998" y="711" font-size="9">REVISION / SCALE</text><text x="998" y="737" font-size="13">P0${variant % 3 + 1} / 1:200</text></g><text x="43" y="773" font-family="Arial,sans-serif" font-size="9" fill="#9aabb3">CIVORA DEMONSTRATION DRAWING · SYNTHETIC DATA · NOT FOR CONSTRUCTION</text></svg>`;
+}
+export function sampleOBJ() { return `# Civora synthetic station massing. Metres. Not a native CAD model.\no Concourse\nv -4 0 -2\nv 4 0 -2\nv 4 0 2\nv -4 0 2\nv -4 2 -2\nv 4 2 -2\nv 4 2 2\nv -4 2 2\nf 1 2 3 4\nf 5 8 7 6\nf 1 5 6 2\nf 2 6 7 3\nf 3 7 8 4\nf 4 8 5 1\no Canopy\nv -5 2.4 -3\nv 5 2.4 -3\nv 5 2.4 3\nv -5 2.4 3\nv 0 3.8 0\nf 9 10 13\nf 10 11 13\nf 11 12 13\nf 12 9 13\n`; }
+export async function createDemo() {
+  let state = createEmptyWorkspace(); state.accessPolicies=[{id:'acl-demo',scope:'workspace',resourceId:state.id,inherit:true,entries:[{principal:'*',allow:['read','download','write','review','publish','share','manage'],deny:[]}]}]; const files = new Map();
+  const day = (days, hour = 10) => { const d = new Date(); d.setUTCDate(d.getUTCDate() + days); d.setUTCHours(hour, 0, 0, 0); return d.toISOString(); };
+  const run = (type, payload, actorId = 'u-admin', days = -1) => { const out = applyCommand(state, { type, payload }, actorId, { now: day(days) }); state = out.state; return out.result; };
+  const maya = run('user.create', { name: 'Maya Chen', email: 'maya@example.test', organization: 'Northline Design', role: 'manager' });
+  const oliver = run('user.create', { name: 'Oliver Grant', email: 'oliver@example.test', organization: 'Structure Collective', role: 'author' });
+  const sofia = run('user.create', { name: 'Sofia Patel', email: 'sofia@example.test', organization: 'Northline Design', role: 'reviewer' });
+  const leo = run('user.create', { name: 'Leo Martin', email: 'leo@example.test', organization: 'City Transport', role: 'viewer' });
+  const p1 = run('project.create', { code: 'NLC', name: 'Northline Central Station', client: 'City Transport Authority', description: 'A connected transport hub. Coordinating architecture, structure, and building services from concept to handover.', phase: 'Detailed design', location: 'Central district', dueDate: day(62).slice(0, 10) }, 'u-admin', -24);
+  const p2 = run('project.create', { code: 'RVB', name: 'Riverside Bridge', client: 'Regional Infrastructure', description: 'Pedestrian and cycle bridge · structural coordination.', phase: 'Concept design', dueDate: day(120).slice(0, 10) }, 'u-admin', -20);
+  const p3 = run('project.create', { code: 'EWC', name: 'Eastwater Campus', client: 'Eastwater Development', phase: 'Technical design', dueDate: day(94).slice(0, 10) }, 'u-admin', -16);
+  const designFolder = state.folders.find(f => f.projectId === p1 && f.name.startsWith('02')).id;
+  const arc = run('folder.create', { projectId: p1, parentId: designFolder, name: 'Architecture' });
+  const str = run('folder.create', { projectId: p1, parentId: designFolder, name: 'Structures' });
+  const mep = run('folder.create', { projectId: p1, parentId: designFolder, name: 'Building services' });
+  const names = [
+    ['NLC-ARC-1001_Concourse-plan.svg', 'Concourse · General arrangement', 'Architecture', arc, drawingSVG(), 'image/svg+xml'],
+    ['NLC-ARC-1002_Platform-plan.svg', 'Platform level · General arrangement', 'Architecture', arc, drawingSVG('Platform level · General arrangement', 1), 'image/svg+xml'],
+    ['NLC-STR-2001_Foundation-plan.svg', 'Foundation layout · Zone A', 'Structures', str, drawingSVG('Foundation layout · Zone A', 2), 'image/svg+xml'],
+    ['NLC-MEP-3001_Services-zones.svg', 'Building services · Coordination zones', 'MEP', mep, drawingSVG('Building services · Coordination zones', 3), 'image/svg+xml'],
+    ['NLC-ARC-1003_Roof-plan.svg', 'Roof canopy · General arrangement', 'Architecture', arc, drawingSVG('Roof canopy · General arrangement', 4), 'image/svg+xml'],
+    ['NLC-ARC-1004_Access-strategy.md', 'Inclusive access strategy', 'Architecture', arc, '# Inclusive access strategy\n\nProject: Northline Central Station\nStatus: Coordination draft\n\n## Design intent\nProvide step-free routes between the public concourse and every platform.\n\n## Coordination actions\n- Confirm lift clearances with the MEP team.\n- Align tactile paving with the public realm package.\n- Resolve ticket gate circulation with the operator.\n\n## Review gates\n1. Architecture review\n2. Accessibility specialist review\n3. Client acceptance\n\nThis is synthetic demonstration content, not a certified design specification.\n', 'text/markdown'],
+    ['NLC-STR-2002_Column-schedule.csv', 'Column schedule · Preliminary', 'Structures', str, 'Mark,Level,Section,Material,Status\nC01,Concourse,400x400,Concrete,Coordination\nC02,Concourse,450x450,Concrete,Review\nC03,Platform,UC 305,Steel,Coordination\nC04,Canopy,CHS 273,Steel,Review\n', 'text/csv'],
+    ['NLC-MEP-3002_Equipment-register.csv', 'MEP equipment register', 'MEP', mep, 'Tag,System,Zone,Description\nAHU-01,Ventilation,A,Air handling unit\nP-02,Drainage,B,Drainage pump\nDB-03,Electrical,A,Distribution board\n', 'text/csv'],
+    ['NLC-ARC-1005_Station-massing.obj', 'Station massing · Coordination model', 'Architecture', arc, sampleOBJ(), 'text/plain'],
+    ['NLC-GEN-0001_Design-brief.md', 'Project design brief', 'General', state.folders.find(f => f.projectId === p1 && f.name.startsWith('01')).id, '# Northline Central Station\n\n## Project objectives\nConnect people, places, and transport through a clear, accessible interchange.\n\n## Delivery scope\nConcourse, platform access, public realm, canopy, and services integration.\n\n## Information management\nAll published deliverables require a recorded approval against the exact revision.\nUse the controlled delivery workflow: Work in progress → Shared → Published → Archived.\n\n## Key stakeholders\nCity Transport Authority\nNorthline Design\nStructure Collective\n\nSynthetic demonstration brief.\n', 'text/markdown'],
+    ['NLC-GEN-0002_Delivery-plan.csv', 'Master information delivery plan', 'General', designFolder, 'Package,Discipline,Milestone,Owner\nConcourse,Architecture,Design review,Northline Design\nFoundations,Structures,Coordination,Structure Collective\nServices,MEP,Technical review,Building Systems\n', 'text/csv'],
+    ['NLC-MEP-3003_Coordination-notes.txt', 'MEP coordination notes', 'MEP', mep, 'COORDINATION NOTES\n\n1. Review ceiling service clearances in zone A.\n2. Update plant access route.\n3. Confirm cable tray penetrations with structure.\n\nNext review: technical coordination workshop.\n', 'text/plain']
+  ];
+  const ids = [];
+  for (let index = 0; index < names.length; index++) {
+    const [name, title, discipline, folderId, content, mime] = names[index]; const file = await prepareFile(new Blob([content], { type: mime })); files.set(file.descriptor.blobId, file.blob);
+    const id = run('document.create', { projectId: p1, folderId, name, title, discipline, number: name.split('_')[0], file: file.descriptor, revision: 'P01', tags: index < 5 ? ['Coordination', 'Zone A'] : ['Design'], metadata: { zone: index % 3 ? 'Zone A' : 'All zones', originator: 'NLC' }, dueDate: day(3 + index % 9).slice(0, 10) }, index % 3 ? 'u-admin' : oliver, -10 + index % 6);
+    ids.push(id);
+    if (index < 2) { run('document.checkout', { id }, 'u-admin', -3); const nextFile = await prepareFile(new Blob([content.replace('P01 /', 'P02 /') + (mime.startsWith('text/') ? '\n' : '\n<!-- Coordination issue -->')], { type: mime })); files.set(nextFile.descriptor.blobId, nextFile.blob); run('document.checkin', { id, revision: 'P02', comment: 'Updated circulation zones following interdisciplinary coordination.', file: nextFile.descriptor }, 'u-admin', -2); }
+    if (index < 5 || index === 9) run('document.transition', { id, to: 'Shared' }, 'u-admin', -2);
+  }
+  run('document.references', { id: ids[8], references: [ids[0], ids[1], ids[2]] });
+  run('document.checkout', { id: ids[6] }, oliver, 0);
+  run('document.checkout', { id: ids[11] }, 'u-admin', 0);
+  const approved = run('review.create', { projectId: p1, title: 'Design brief · Client acceptance', documentIds: [ids[9]], assignees: ['u-admin'], dueDate: day(-1).slice(0, 10) }, maya, -4);
+  run('review.decide', { id: approved, decision: 'Approved', comment: 'Accepted for the next design stage.' }, 'u-admin', -3);
+  run('document.transition', { id: ids[9], to: 'Published' }, 'u-admin', -2);
+  run('review.create', { projectId: p1, title: 'Concourse & platform · Design review', description: 'Check public circulation, platform interfaces, and drawing consistency.', documentIds: [ids[0], ids[1]], stages: [{name:'Discipline coordination',assignees:['u-admin',sofia],quorum:1,dueDate:day(2).slice(0,10)},{name:'Delivery approval',assignees:[maya],quorum:1,dueDate:day(4).slice(0,10)}], dueDate: day(2).slice(0, 10) }, maya, -1);
+  run('review.create', { projectId: p1, title: 'Foundation coordination · Zone A', documentIds: [ids[2]], assignees: ['u-admin'], dueDate: day(-1).slice(0, 10) }, maya, -2);
+  run('review.create', { projectId: p1, title: 'Services clearance review', documentIds: [ids[3]], assignees: [sofia], dueDate: day(5).slice(0, 10) }, maya, -1);
+  const issue = run('issue.create', { projectId: p1, documentId: ids[0], title: 'Confirm clear width at ticket gates', description: 'Coordinate the gate line with the proposed concourse circulation route. Record the agreed dimensions before issue.', kind: 'Issue', assignee: 'u-admin', priority: 'High', dueDate: day(1).slice(0, 10) }, sofia, -2);
+  run('issue.create', { projectId: p1, documentId: ids[3], title: 'Plant room maintenance access', description: 'Please confirm the minimum equipment replacement route with the operator.', kind: 'RFI', assignee: maya, priority: 'Normal', dueDate: day(4).slice(0, 10) }, oliver, -1);
+  const issue2 = run('issue.create', { projectId: p1, documentId: ids[2], title: 'Align foundation and column grid', kind: 'Issue', assignee: oliver, priority: 'High', dueDate: day(3).slice(0, 10) }, 'u-admin', -3);
+  run('issue.update', { id: issue2, status: 'In progress', response: 'Structural grid checked; revised schedule in preparation.' }, oliver, -1);
+  const issue3 = run('issue.create', { projectId: p1, documentId: ids[1], title: 'Platform edge detail reference', kind: 'Issue', assignee: 'u-admin', priority: 'Low', dueDate: day(-2).slice(0, 10) }, 'u-admin', -5);
+  run('issue.update', { id: issue3, status: 'Resolved', response: 'Reference updated for the latest coordination drawing.' }, 'u-admin', -1);
+  run('comment.add', { id: ids[0], text: 'The revised concourse arrangement is ready for interdisciplinary review. Please check the gate line and plant access.' }, maya, -1);
+  run('comment.add', { id: ids[0], text: 'Structure is aligned to the current grid. One ticket-gate clearance remains open in the issue register.' }, oliver, 0);
+  run('markup.add', { id: ids[0], tool: 'rectangle', x: 0.30, y: 0.39, w: 0.34, h: 0.13, text: 'Review clear pedestrian circulation through the gate line.' }, sofia, -1);
+  run('set.create', { projectId: p1, name: 'Stage 3 · Coordination package', description: 'Architecture, structure, and services drawings for coordinated review.', documentIds: ids.slice(0, 5) }, maya, -3);
+  run('set.create', { projectId: p1, name: 'Client information', description: 'Project brief and delivery plan.', documentIds: [ids[9], ids[10]] }, 'u-admin', -2);
+  const tr = run('transmittal.create', { projectId: p1, title: 'Approved design brief', documentIds: [ids[9]], recipients: 'client@example.test', purpose: 'For information', message: 'Approved brief for the detailed design stage.', dueDate: day(3).slice(0, 10) }, maya, -2);
+  run('transmittal.issue', { id: tr }, maya, -1);
+  run('transmittal.create', { projectId: p1, title: 'Stage 3 · Coordination drawings', documentIds: ids.slice(0, 4), recipients: ['design@example.test', 'structures@example.test'], purpose: 'For coordination', dueDate: day(7).slice(0, 10) }, 'u-admin', -1);
+  for (const [title, days] of [['Interdisciplinary coordination', 2], ['Stage 3 design freeze', 12], ['Client design review', 20], ['Published information release', 30]]) run('milestone.create', { projectId: p1, title, dueDate: day(days).slice(0, 10) }, maya, -4);
+  for (const [p, prefix] of [[p2, 'RVB'], [p3, 'EWC']]) for (let i = 0; i < 3; i++) { const file = await prepareFile(new Blob([drawingSVG(`${prefix} · Coordination drawing ${i + 1}`, i)], { type: 'image/svg+xml' })); files.set(file.descriptor.blobId, file.blob); run('document.create', { projectId: p, folderId: state.folders.find(f => f.projectId === p && f.name.startsWith('02')).id, name: `${prefix}-ARC-${1001 + i}_General-arrangement.svg`, title: 'General arrangement', discipline: i === 1 ? 'Structures' : 'Architecture', file: file.descriptor, revision: 'P01', tags: ['Coordination'] }, 'u-admin', -3 + i); }
+  const fixtures=coordinationFixtures();
+  const modelFolder=run('folder.create',{projectId:p1,name:'05 · Federated coordination'},'u-admin',-2);
+  for(const [name,title,content,mime,discipline,isModel]of[
+    ['NLC-STR-4001_Frame.mesh.json','Structural frame · Federated source',JSON.stringify(fixtures.structure),'application/json','Structures',true],
+    ['NLC-MEP-4002_Services.mesh.json','Mechanical services · Federated source',JSON.stringify(fixtures.services),'application/json','MEP',true],
+    ['NLC-STR-4003_Coordination-plan.dxf','Structural coordination · Native DXF',fixtures.drawing,'application/dxf','Structures',false]
+  ]){const file=await prepareFile(new Blob([content],{type:mime}));files.set(file.descriptor.blobId,file.blob);const id=run('document.create',{projectId:p1,folderId:modelFolder,name,title,discipline,file:file.descriptor,revision:'P01',tags:['Synthetic sample','Coordination']},'u-admin',-1);if(isModel)run('model.register',{projectId:p1,documentId:id,name:title},'u-admin',-1);}
+  run('search.save', { name: 'Shared for coordination', state: 'Shared', query: '', projectId: p1 });
+  run('search.save', { name: 'Architecture drawings', query: 'type:svg', discipline: 'Architecture', projectId: p1 });
+  // Original synthetic document-control examples; no imported product files or proprietary assets.
+  run('project.fields',{id:p1,fields:[
+    {key:'zone',label:'Zone',type:'choice',required:false,options:['Zone A','Zone B','All zones'],defaultValue:'Zone A'},
+    {key:'originator',label:'Originator',type:'text',required:false,format:'code',maxLength:20,defaultValue:'NLC'},
+    {key:'suitability',label:'Suitability code',type:'choice',required:false,options:['S0','S1','S2','S3','A1'],defaultValue:'S0'},
+    {key:'handover_ready',label:'Handover ready',type:'boolean',required:false,defaultValue:'false'}
+  ]},'u-admin',0);
+  run('project.numbering',{id:p1,numbering:{pattern:'{project}-DOC-{seq:5}',nextSequence:100,allowManual:true}},'u-admin',0);
+  run('reviewTemplate.save',{projectId:p1,name:'Technical review → Delivery approval',separationOfDuties:false,stages:[{name:'Discipline coordination',assignees:['u-admin',sofia],quorum:1},{name:'Delivery approval',assignees:[maya],quorum:1}]},'u-admin',0);
+  run('reviewTemplate.save',{projectId:p1,name:'Independent design assurance',separationOfDuties:true,stages:[{name:'Independent check',assignees:[sofia],quorum:1},{name:'Information manager approval',assignees:[maya],quorum:1}]},'u-admin',0);
+  run('baseline.create',{projectId:p1,name:'Stage 3 · Coordination freeze',description:'Original synthetic coordination issue: architecture, structure and services.',documentIds:ids.slice(0,5),includeReferences:true},'u-admin',0);
+  run('document.update',{id:ids[4],description:'Delivery metadata clarified after coordination. Source drawing bytes are unchanged.'},'u-admin',0);
+  run('baseline.create',{projectId:p1,name:'Stage 3 · Delivery register',description:'Same source revisions with the revised delivery metadata recorded explicitly.',documentIds:ids.slice(0,5),includeReferences:true},'u-admin',0);
+  run('workflowRule.save',{projectId:p1,name:'Coordination release · record the reason',from:'Work in progress',to:'Shared',priority:10,when:{all:[]},require:{all:[]},requireReason:true,message:'Record the purpose of this controlled release.'},'u-admin',0);
+  run('workflowRule.save',{projectId:p1,name:'Drawing readiness · originator and zone',to:'Shared',priority:20,enabled:false,when:{field:'name',op:'contains',value:'.svg'},require:{all:[{field:'metadata.zone',op:'exists'},{field:'metadata.originator',op:'exists'}]},message:'Complete the zone and originator before sharing the drawing.'},'u-admin',0);
+  run('workflowRule.save',{projectId:p1,name:'Handover gate · explicit readiness',to:'Archived',priority:30,when:{all:[]},require:{field:'metadata.handover_ready',op:'eq',value:true},requireReason:true,message:'Confirm handover readiness before archiving.'},'u-admin',0);
+  run('automation.configure',{projectId:p1,enabled:false,reminderHours:24,escalationHours:24,escalationMode:'notify',notifyUserIds:[maya],includeIssues:true,includeDocuments:false},'u-admin',0);
+  run('subscription.save',{scope:'project',resourceId:p1,events:['document.revised','document.state','review.started','review.decision','delivery.issued']},'u-admin',0);
+  state.name = 'Northline Design · Demo workspace';
+  state.audit.sort((a, b) => a.at.localeCompare(b.at) || a.sequence - b.sequence);
+  return { state, files, primaryProjectId: p1, primaryDocumentId: ids[0] };
+}

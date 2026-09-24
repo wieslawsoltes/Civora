@@ -1,0 +1,17 @@
+/** Optional OIDC sign-in for existing workspace members. Requires `jose`.
+ * This is not a general identity platform; configure and qualify your provider.
+ */
+import { randomBytes, createHash } from 'node:crypto';
+const secret=()=>randomBytes(32).toString('base64url');
+export async function createOIDC({issuer,clientId,clientSecret,origin}){
+  if(!issuer||!clientId)return null;
+  const issuerURL=new URL(issuer);if(issuerURL.protocol!=='https:')throw new Error('OIDC issuer must use HTTPS.');
+  const discovery=await fetch(`${issuer.replace(/\/$/,'')}/.well-known/openid-configuration`,{signal:AbortSignal.timeout(10000)});if(!discovery.ok)throw new Error('OIDC discovery failed.');const metadata=await discovery.json();
+  if(metadata.issuer!==issuer&&metadata.issuer!==issuer.replace(/\/$/,''))throw new Error('OIDC issuer mismatch.');
+  for(const key of ['authorization_endpoint','token_endpoint','jwks_uri'])if(new URL(metadata[key]).protocol!=='https:')throw new Error('OIDC endpoints must use HTTPS.');
+  const{createRemoteJWKSet,jwtVerify}=await import('jose'),keys=createRemoteJWKSet(new URL(metadata.jwks_uri)),pending=new Map(),redirect=`${origin}/auth/oidc/callback`;
+  const secure=origin.startsWith('https:')?'; Secure':'';
+  return {start(req,res){for(const[id,x]of pending)if(x.expires<Date.now())pending.delete(id);if(pending.size>1000){res.writeHead(429).end('Try again later');return;}const state=secret(),nonce=secret(),verifier=secret(),binding=secret();pending.set(state,{nonce,verifier,binding,expires:Date.now()+300000});const url=new URL(metadata.authorization_endpoint);url.search=new URLSearchParams({client_id:clientId,redirect_uri:redirect,response_type:'code',scope:'openid email profile',state,nonce,code_challenge:createHash('sha256').update(verifier).digest('base64url'),code_challenge_method:'S256'}).toString();res.writeHead(302,{'Location':url.href,'Set-Cookie':`civora_oidc=${binding}; HttpOnly; SameSite=Lax; Path=/auth/oidc; Max-Age=300${secure}`,'Cache-Control':'no-store'}).end();},
+    async finish(req,url){const state=url.searchParams.get('state'),record=pending.get(state);pending.delete(state);const binding=(req.headers.cookie||'').split(';').map(s=>s.trim()).find(s=>s.startsWith('civora_oidc='))?.slice(12);if(!record||record.expires<Date.now()||binding!==record.binding)throw new Error('Invalid or expired OIDC callback.');if(url.searchParams.has('error'))throw new Error('Organization sign-in was declined.');const code=url.searchParams.get('code');if(!code)throw new Error('Missing authorization code.');const body=new URLSearchParams({grant_type:'authorization_code',client_id:clientId,code,redirect_uri:redirect,code_verifier:record.verifier,...(clientSecret?{client_secret:clientSecret}:{})});const response=await fetch(metadata.token_endpoint,{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body,signal:AbortSignal.timeout(15000)}),tokens=await response.json();if(!response.ok||!tokens.id_token)throw new Error('OIDC token exchange failed.');const{payload}=await jwtVerify(tokens.id_token,keys,{issuer:metadata.issuer,audience:clientId,requiredClaims:['sub','iat','exp','nonce'],maxTokenAge:'10m',algorithms:['RS256','ES256','PS256']});if(payload.nonce!==record.nonce)throw new Error('OIDC nonce mismatch.');if(payload.email_verified!==true||typeof payload.email!=='string')throw new Error('This server requires a verified email claim to map an existing workspace member.');return payload.email.toLowerCase();}
+  };
+}

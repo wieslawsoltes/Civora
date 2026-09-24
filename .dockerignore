@@ -1,15 +1,15 @@
-node_modules/
-data/
+.git
+node_modules
+data
+test-results
 .env
 .env.*
-!.env.example
-test-results/
+__pycache__
+**/__pycache__
+*.zip
 *.log
-.DS_Store
 
 data-local/
 .civora/
 .civora-work/
 .civora-trash/
-
-_site/

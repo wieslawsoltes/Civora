@@ -1,0 +1,29 @@
+# Example only: review secrets, TLS, image digest and backups before use.
+# Run with: docker compose -f compose.example.yaml up --build
+services:
+  civora:
+    build: .
+    init: true
+    read_only: true
+    ports:
+      - "127.0.0.1:8787:8787"
+    environment:
+      HOST: "0.0.0.0"
+      PORT: "8787"
+      CIVORA_PUBLIC_ORIGIN: ${CIVORA_PUBLIC_ORIGIN:-http://127.0.0.1:8787}
+      CIVORA_ADMIN_PASSWORD: ${CIVORA_ADMIN_PASSWORD:?Set a unique initial administrator password}
+      CIVORA_DATA_DIR: /var/lib/civora
+      CIVORA_DB: sqlite
+      CIVORA_AUTO_RENDITIONS: "1"
+    volumes:
+      - civora-data:/var/lib/civora
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,size=64m
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    stop_grace_period: 75s
+    restart: unless-stopped
+volumes:
+  civora-data:

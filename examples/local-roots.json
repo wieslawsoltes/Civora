@@ -1,0 +1,14 @@
+{
+  "version": 1,
+  "roots": [
+    {
+      "id": "working",
+      "label": "My engineering working files",
+      "path": "/absolute/path/to/working-files",
+      "userIds": ["u-admin"],
+      "readOnly": false,
+      "allowNativeOpen": false,
+      "allowReveal": false
+    }
+  ]
+}

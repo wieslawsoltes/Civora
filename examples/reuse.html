@@ -1,0 +1,5 @@
+<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Civora · independent library example</title><link rel="stylesheet" href="../app/styles.css"><body style="padding:40px;max-width:900px;margin:auto"><h1>Core library without the Civora app</h1><p>Create an engineering project using only the standalone core module.</p><button class="btn primary" id="create">Create a project</button><pre id="output" style="white-space:pre-wrap;margin-top:24px"></pre><script type="module">
+import {createEmptyWorkspace,applyCommand} from '../dist/lib/civora-core.js';
+let workspace=createEmptyWorkspace();
+document.getElementById('create').onclick=()=>{const result=applyCommand(workspace,{type:'project.create',payload:{name:'Independent integration',code:'PROJECT-'+(workspace.projects.length+1)}},'u-admin');workspace=result.state;document.getElementById('output').textContent=JSON.stringify(workspace.projects,null,2);};
+</script></body></html>
