@@ -13,51 +13,62 @@ jobs:
   import:
     if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v6
       - uses: actions/setup-node@v6
         with:
           node-version: '22'
-      - name: Verify and unpack the complete source
+      - name: Verify the full archive and safely restore every source file
         run: |
           python3 - <<'PY'
           import hashlib, io, json, lzma, pathlib, tarfile
           root = pathlib.Path.cwd()
           manifest = json.loads((root / '.import/manifest.json').read_text())
-          assert manifest['format'] == 'civora-source-import'
+          assert manifest['format'] == 'civora-source-import-v2'
+          assert manifest['parts'] == 38 and manifest['archive_size'] == 463176
           chunks = []
-          for part in manifest['parts']:
-              path = pathlib.PurePosixPath(part['path'])
-              assert path.parts[0] == '.import' and len(path.parts) == 2 and '..' not in path.parts
-              data = (root / str(path)).read_bytes()
-              assert len(data) == part['size']
-              assert hashlib.sha1(('blob %d\0' % len(data)).encode() + data).hexdigest() == part['sha']
+          for index in range(manifest['parts']):
+              data = (root / '.import' / ('part-%03d.bin' % index)).read_bytes()
+              expected_size = min(manifest['part_size'], manifest['archive_size'] - index * manifest['part_size'])
+              assert len(data) == expected_size, 'Part size mismatch: %d' % index
               chunks.append(data)
           payload = b''.join(chunks)
-          assert hashlib.sha256(payload).hexdigest() == manifest['sha256'], 'Source archive checksum mismatch'
-          expected = {item['path']: item['sha256'] for item in manifest['files']}
-          with tarfile.open(fileobj=io.BytesIO(lzma.decompress(payload)), mode='r:') as archive:
+          assert len(payload) == manifest['archive_size']
+          assert hashlib.sha256(payload).hexdigest() == manifest['sha256'], 'Full source archive checksum mismatch'
+          raw = lzma.decompress(payload, memlimit=256 * 1024 * 1024)
+          assert len(raw) == manifest['tar_size']
+          evidence = []
+          with tarfile.open(fileobj=io.BytesIO(raw), mode='r:') as archive:
               entries = archive.getmembers()
-              assert len(entries) == len(expected) and {entry.name for entry in entries} == set(expected)
+              assert len(entries) == manifest['source_files'] == 175
+              assert len({entry.name for entry in entries}) == len(entries)
+              assert sum(entry.size for entry in entries) == manifest['source_bytes']
               for entry in entries:
                   path = pathlib.PurePosixPath(entry.name)
                   assert entry.isfile() and not path.is_absolute() and '..' not in path.parts
-                  assert path.parts[0] not in ('.git', '.github', '.import') and '\\' not in entry.name
+                  assert str(path) == entry.name and '\\' not in entry.name
+                  assert path.parts[0] not in ('.git', '.github', '.import')
+                  target = root.joinpath(*path.parts)
+                  assert target.resolve().is_relative_to(root)
                   data = archive.extractfile(entry).read()
-                  assert hashlib.sha256(data).hexdigest() == expected[entry.name], entry.name
-                  target = root / entry.name
+                  assert len(data) == entry.size
                   target.parent.mkdir(parents=True, exist_ok=True)
                   target.write_bytes(data)
                   target.chmod(entry.mode & 0o777)
-          print('Verified and restored %d source files.' % len(expected))
+                  digest = hashlib.sha256(data).hexdigest()
+                  assert hashlib.sha256(target.read_bytes()).hexdigest() == digest
+                  evidence.append({'path': entry.name, 'size': len(data), 'sha256': digest})
+          (root / 'docs/SOURCE-IMPORT.json').write_text(json.dumps({'archive_sha256': manifest['sha256'], 'source_version': manifest['version'], 'files': evidence}, indent=2) + '\n')
+          print('Verified full archive SHA-256 and restored all %d source files.' % len(evidence))
           PY
-      - name: Build application and independent libraries
+      - name: Build application, independent libraries, and Pages allowlist
         run: npm run build:pages
-      - name: Check syntax and run all tests
+      - name: Check syntax and run all engine and HTTP tests
         run: |
           npm run check
           npm test
+          npm run test:pages
           node tests/static-http.mjs
           for example in core local-text document-control automation explorer document-sets refinements workbench; do
             node "examples/$example.mjs"
